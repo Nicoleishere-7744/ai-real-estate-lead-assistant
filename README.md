@@ -1,59 +1,74 @@
-# AI Real Estate Lead Assistant
+# Atlas Property Group — AI Real Estate Lead Assistant
 
-An AI lead qualification and viewing-request assistant for real estate agencies, built with **n8n, OpenAI, Supabase, Telegram, and a lightweight web demo**.
+English-market demo of an AI lead qualification and viewing-request assistant for real estate agencies.
 
-## What it does
+## Stack
+n8n · OpenAI · Supabase · Telegram · HTML/JavaScript · Ruflo (development/orchestration)
 
-- Handles property-buying and rental inquiries
-- Captures location, property type, budget, bedrooms, area requirements, financing/payment preferences, and contact information
+## Capabilities
+- Handles buying, renting, selling, and investment inquiries
+- Captures location, property type, budget, bedrooms, size, financing, and contact details
 - Detects viewing intent and high-intent leads
 - Stores and updates lead history in Supabase
-- Sends qualified leads to an agent via Telegram
-- Prevents repeated sales notifications
-- Supports a live website demo through an n8n webhook
-- Avoids claiming that a property is currently available unless the approved data confirms it
+- Sends qualified leads to agents via Telegram
+- Prevents duplicate notifications
+- Avoids inventing listings, prices, mortgage terms, or live availability
 
-## Repository structure
+## Files
+- `workflow/atlas-property-ai-lead-assistant-en.json` — n8n workflow, credentials removed
+- `setup/supabase.sql` — database schema
+- `demo/index.html` — English live-demo frontend
+- `ruflo/SETUP.md` — Ruflo setup instructions
+- `ruflo/PROJECT_AGENT_SPEC.md` — project-specific multi-agent responsibilities and QA gates
+- `ruflo/bootstrap-ruflo.ps1` — optional Windows PowerShell bootstrap
+
+## Runtime architecture
 
 ```text
-workflow/
-  real-estate-ai-agent.json    # n8n workflow (credentials removed)
-demo/
-  index.html                   # browser demo
-setup/
-  supabase.sql                 # database schema
+Website demo
+   ↓
+n8n webhook
+   ↓
+AI conversation + structured lead extraction
+   ↓
+Supabase lead memory/history
+   ↓
+Qualification / handoff gates
+   ↓
+Telegram sales notification (once per actionable lead)
 ```
 
-## Setup
+Ruflo does **not** replace the production n8n webhook in this version. It is added as the agent orchestration layer for development, testing, security review, prompt refinement, and future multi-agent expansion.
 
-1. Create a dedicated Supabase project.
-2. Run `setup/supabase.sql`.
-3. Import `workflow/real-estate-ai-agent.json` into n8n.
-4. Reconnect your own:
-   - OpenAI credential
-   - Supabase credential
-   - Telegram credential
-5. Set the Telegram Chat ID.
-6. Replace demo property/business information in the system prompt with approved client data.
-7. Publish the workflow in n8n.
-8. Update the webhook URL in `demo/index.html` if necessary.
-9. Deploy the demo folder to Netlify, GitHub Pages, Vercel, or another static host.
+## Quick setup — production demo
+1. Run `setup/supabase.sql` in a dedicated Supabase project.
+2. Import the workflow JSON into n8n.
+3. Reconnect your own OpenAI, Supabase, and Telegram credentials.
+4. Add your Telegram Chat ID.
+5. Publish the workflow.
+6. If needed, update the webhook in `demo/index.html`.
+7. Deploy the demo to Netlify, Vercel, GitHub Pages, or another static host.
+
+## Quick setup — Ruflo-assisted development
+
+Ruflo requires Node.js 20+ and npm 9+. For Claude Code + Codex dual setup, run from the repository root:
+
+```powershell
+npx ruflo@latest init --dual
+npx ruflo@latest doctor --fix
+npx ruflo@latest swarm init --topology hierarchical --max-agents 5 --strategy specialized
+```
+
+On Windows, you can alternatively run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\ruflo\bootstrap-ruflo.ps1
+```
+
+Then give the orchestrated agents `ruflo/PROJECT_AGENT_SPEC.md` as the project brief.
 
 ## Security
+No API keys, Supabase secrets, Telegram bot tokens, or n8n credential references are included in this public package.
 
-This public version intentionally contains **no API keys, Supabase secrets, Telegram bot tokens, or n8n credential references**.
-
-Do not commit customer data or private credentials.
-
-## Example demo flow
-
-1. Visitor asks for a two-bedroom apartment in a target neighborhood with a stated budget.
-2. Assistant qualifies the request without inventing availability.
-3. Visitor asks to arrange a viewing and provides a phone number.
-4. Lead is stored/updated in Supabase.
-5. Telegram notifies the agent when follow-up is actionable.
-6. The workflow prevents duplicate notifications for the same qualified lead.
-
-## Production note
-
-Demo listings are placeholders. For a real agency, replace them with approved listings or connect the workflow to the agency's maintained listing source/CRM.
+## Production use
+Replace the demo agency information and listings with the client's approved data or connect the workflow to a maintained listing database/CRM.
