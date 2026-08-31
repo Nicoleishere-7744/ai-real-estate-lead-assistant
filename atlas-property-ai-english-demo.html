@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atlas Property AI — Live Demo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f1ee;color:#292522;font-family:Inter,Arial,sans-serif}
+.wrap{max-width:1180px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+h1{margin:0;font-size:28px}.tag{background:white;border:1px solid #ddd1c8;padding:9px 12px;border-radius:999px;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:#fff;border:1px solid #e2d8d0;border-radius:22px;box-shadow:0 16px 40px #0000000d;overflow:hidden}
+.head{padding:15px 17px;border-bottom:1px solid #e8dfd8;font-weight:800}.msgs{height:500px;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.b{max-width:85%;padding:12px 14px;border-radius:15px;line-height:1.5}.bot{background:#eadde4;align-self:flex-start}.user{background:#ece7e3;align-self:flex-end}
+.input{display:flex;gap:8px;padding:13px;border-top:1px solid #e8dfd8}.input input{flex:1;padding:12px;border:1px solid #d9cec7;border-radius:12px}.btn{border:0;background:#272321;color:#fff;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer}
+.side{padding:18px}.side h2{margin-top:0}.chips{display:flex;gap:8px;flex-wrap:wrap}.chips button{border:0;background:#f1e7e1;padding:9px 10px;border-radius:11px;cursor:pointer}
+.flow{margin-top:18px;background:#121416;color:#fff;padding:16px;border-radius:18px}.step{padding:10px 12px;border:1px solid #3e464b;border-radius:10px;margin:8px 0;background:#1d2225}.step.on{border-color:#79c98a;box-shadow:0 0 14px #79c98a55}
+.note{margin-top:12px;padding:12px;border-radius:12px;background:#eef7ff;display:none}.note.show{display:block}.small{color:#7e7168;font-size:13px;line-height:1.55}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>Atlas Property AI</h1><div class="small">OpenAI • n8n • Supabase • Structured Output • Human Handoff</div></div>
+    <div class="tag">Live technical demo • English</div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="head">Live customer conversation</div>
+      <div id="msgs" class="msgs"><div class="b bot">Hi — tell me what kind of property you're looking for, your preferred area, and your budget.</div></div>
+      <div class="input"><input id="inp" placeholder="e.g. I need a 2-bedroom apartment around $450k"><button id="send" class="btn">Send</button></div>
+    </div>
+    <div class="card">
+      <div class="side">
+        <h2>Try a realistic lead flow</h2>
+        <p class="small">The LLM produces constrained structured state. Server-side workflow rules decide database writes and human-notification side effects.</p>
+        <div class="chips">
+          <button data-q="I'm looking to buy a two-bedroom apartment. My budget is around $450,000.">Buyer inquiry</button>
+          <button data-q="Parking and elevator access are important.">Requirements</button>
+          <button data-q="I'd like to arrange a viewing tomorrow afternoon.">Viewing request</button>
+          <button data-q="My name is Sarah Miller and my email is sarah@example.com. Please have an agent contact me.">Qualified handoff</button>
+        </div>
+        <div class="flow">
+          <b>Illustrative execution path</b>
+          <div class="step" data-s="webhook">1. POST webhook</div>
+          <div class="step" data-s="prepare">2. Normalize input + session</div>
+          <div class="step" data-s="llm">3. LLM + structured output</div>
+          <div class="step" data-s="lookup">4. Lookup lead by session_id</div>
+          <div class="step" data-s="persist">5. Create / update Supabase</div>
+          <div class="step" data-s="gate">6. Action / handoff policy gate</div>
+          <div class="step" data-s="notify">7. Conditional human notification</div>
+          <div class="step" data-s="response">8. Return response</div>
+        </div>
+        <div id="state" class="small" style="margin-top:12px">Ready for live test.</div>
+        <div id="note" class="note"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const W='https://chamnam.app.n8n.cloud/webhook/real-estate-demo-chat';
+const sid='atlas-en-'+Date.now(), $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function bubble(t,c){const d=document.createElement('div');d.className='b '+c;d.textContent=t;$('#msgs').appendChild(d);$('#msgs').scrollTop=$('#msgs').scrollHeight}
+function trace(hot){$$('.step').forEach(x=>x.classList.remove('on'));const seq=hot?['webhook','prepare','llm','lookup','persist','gate','notify','response']:['webhook','prepare','llm','lookup','persist','gate','response'];seq.forEach((s,i)=>setTimeout(()=>{const el=document.querySelector('[data-s="'+s+'"]');if(el)el.classList.add('on')},i*180))}
+async function send(t){
+ if(!t)return; bubble(t,'user'); $('#inp').value=''; const hot=/viewing|contact|agent|call|email|phone|tomorrow|schedule/i.test(t); trace(hot);
+ $('#state').textContent='Calling deployed n8n backend…'; $('#note').classList.remove('show');
+ try{
+   const r=await fetch(W,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatInput:t,sessionId:sid,language:'en'})});
+   const raw=await r.text(); let d; try{d=JSON.parse(raw)}catch{d={response:raw}}
+   if(!r.ok)throw Error('HTTP '+r.status);
+   bubble(d.response||d.output||d.message||'Response received.','bot');
+   $('#state').textContent='Workflow completed. Session state is retained.';
+   if(d.lead_ready||d.viewing_intent){$('#note').classList.add('show');$('#note').textContent='Actionable lead state detected. The server-side workflow can enter its human-handoff branch.'}
+ }catch(e){bubble('The live backend is temporarily unavailable. Please try again.','bot');$('#state').textContent='Backend request failed.'}
+}
+$('#send').onclick=()=>send($('#inp').value);$('#inp').onkeydown=e=>{if(e.key==='Enter')$('#send').click()};$$('[data-q]').forEach(b=>b.onclick=()=>send(b.dataset.q));
+</script>
+</body>
+</html>
