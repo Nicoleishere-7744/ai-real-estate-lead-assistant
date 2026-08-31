@@ -106,9 +106,11 @@ Those are explicit production-hardening items rather than features I claim are a
 
 ## Repository contents
 
-- `real_estate_workflow_sanitized.json` — sanitized n8n workflow export
-- `ARCHITECTURE.md` — design notes and execution boundaries
-- `AXEL_SCREENING_RESPONSE.md` — concise technical screening answers
+- `workflow/atlas-property-ai-lead-assistant-en.json` — sanitized n8n workflow export
+- `demo/index.html` — English live-demo frontend
+- `setup/supabase.sql` — database schema
+- `ARCHITECTURE.md` — design notes, trust boundaries, and production-hardening considerations
+- `ruflo/` — optional multi-agent development/orchestration setup
 
 ## Scope note
 
